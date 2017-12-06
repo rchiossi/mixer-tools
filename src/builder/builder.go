@@ -200,15 +200,15 @@ func (b *Builder) UpdateRepo(ver string, allbundles bool) {
 				os.Exit(1)
 			}
 			for _, file := range files {
-				helpers.CopyFile(bundles+"/"+file.Name(), clrbundles+file.Name())
+				helpers.CopyFile(bundles+"/"+file.Name(), clrbundles+file.Name(), true)
 			}
 		} else {
 			// Install only a minimal set of bundles
 			fmt.Println("Adding os-core, os-core-update, kernel-native, bootloader to mix-bundles...")
-			helpers.CopyFile(bundles+"/os-core", clrbundles+"os-core")
-			helpers.CopyFile(bundles+"/os-core-update", clrbundles+"os-core-update")
-			helpers.CopyFile(bundles+"/kernel-native", clrbundles+"kernel-native")
-			helpers.CopyFile(bundles+"/bootloader", clrbundles+"bootloader")
+			helpers.CopyFile(bundles+"/os-core", clrbundles+"os-core", true)
+			helpers.CopyFile(bundles+"/os-core-update", clrbundles+"os-core-update", true)
+			helpers.CopyFile(bundles+"/kernel-native", clrbundles+"kernel-native", true)
+			helpers.CopyFile(bundles+"/bootloader", clrbundles+"bootloader", true)
 		}
 
 		// Save current dir so we can get back to it
@@ -272,7 +272,7 @@ func (b *Builder) AddBundles(bundles []string, force bool, git bool) int {
 			}
 
 			fmt.Printf("Adding bundle %q\n", bundle)
-			helpers.CopyFile(bundledir+bundle, clrbundledir+bundle)
+			helpers.CopyFile(bundledir+bundle, clrbundledir+bundle, true)
 			bundleAddCount++
 		} else {
 			fmt.Printf("Warning: bundle %q already exists; skipping.\n", bundle)
@@ -409,7 +409,7 @@ func (b *Builder) BuildChroots(template *x509.Certificate, privkey *rsa.PrivateK
 		}
 		chrootcert := certdir + "/Swupd_Root.pem"
 		fmt.Println("Copying Certificate into chroot...")
-		err = helpers.CopyFile(chrootcert, b.Cert)
+		err = helpers.CopyFile(chrootcert, b.Cert, true)
 		if err != nil {
 			helpers.PrintError(err)
 			return err
@@ -564,7 +564,7 @@ func (b *Builder) AddRPMList(rpms []os.FileInfo) {
 		fmt.Printf("Hardlinking %s to repodir\n", rpm.Name())
 		err := os.Link(b.Rpmdir+"/"+rpm.Name(), b.Repodir+"/"+rpm.Name())
 		if err != nil {
-			err = helpers.CopyFile(b.Repodir+"/"+rpm.Name(), b.Rpmdir+"/"+rpm.Name())
+			err = helpers.CopyFile(b.Repodir+"/"+rpm.Name(), b.Rpmdir+"/"+rpm.Name(), true)
 			if err != nil {
 				helpers.PrintError(err)
 				os.Exit(1)

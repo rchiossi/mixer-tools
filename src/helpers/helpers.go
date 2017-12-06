@@ -137,7 +137,7 @@ func GetIncludedBundles(filename string) ([]string, error) {
 
 // CopyFile is used during the build process to copy a given file to the target
 // instead of dealing with the particulars of hardlinking.
-func CopyFile(dest string, src string) error {
+func CopyFile(dest string, src string, overwrite bool) error {
 	source, err := os.Open(src)
 	if err != nil {
 		PrintError(err)
@@ -145,7 +145,12 @@ func CopyFile(dest string, src string) error {
 	}
 	defer source.Close()
 
-	destination, err := os.Create(dest)
+	flags := os.O_RDWR | os.O_CREATE
+	if !overwrite {
+		flags |= os.O_EXCL
+	}
+
+	destination, err := os.OpenFile(dest, flags, 0666)
 	if err != nil {
 		PrintError(err)
 		return err
