@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,7 @@ func init() {
 		{"add-rpms", "Add rpms to local yum repository", cmdAddRPMs},
 		{"get-bundles", "Get the clr-bundles from upstream", cmdGetBundles},
 		{"add-bundles", "Add clr-bundles to your mix", cmdAddBundles},
+		{"init", "Initialize a new mix", cmdInit},
 		{"init-mix", "Initialize the mixer and workspace", cmdInitMix},
 		{"help", "Show help options", cmdHelp},
 	}
@@ -222,6 +224,53 @@ func cmdAddBundles(args []string) {
 	b := builder.NewFromConfig(*conf)
 	bundles := strings.Split(*bundlesarg, ",")
 	b.AddBundles(bundles, *force, *git)
+}
+
+func cmdInit(args []string) {
+	pwd, err := os.Getwd()
+	if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	}
+
+	err = os.Mkdir(pwd+"/rpms", 0755)
+	if os.IsExist(err) {
+		fmt.Println("Directory '/rpms' already exists. Skipping...")
+	} else if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	}
+
+	err = os.Mkdir(pwd+"/local", 0755)
+	if os.IsExist(err) {
+		fmt.Println("Directory '/local' already exists. Skipping...")
+	} else if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	}
+
+	err = helpers.CopyFile(pwd+"/builder.conf", "/usr/share/defaults/bundle-chroot-builder/builder.conf", false)
+	if os.IsExist(err) {
+		fmt.Println("File 'builder.conf' already exists. Skipping...")
+	} else if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	} else {
+		raw, err := ioutil.ReadFile(pwd + "/builder.conf")
+		if err != nil {
+			helpers.PrintError(err)
+			os.Exit(1)
+		}
+
+		data := strings.Replace(string(raw), "/home/clr/mix", pwd, -1)
+		data += "\nRPMDIR=" + pwd + "/rpms\n"
+		data += "REPODIR=" + pwd + "/local\n"
+
+		re := regexp.MustCompile("<(.)+>\n")
+		data = re.ReplaceAllString(data, "file://"+pwd+"/update/www\n")
+
+		err = ioutil.WriteFile(pwd+"/builder.conf", []byte(data), 0666)
+	}
 }
 
 func cmdInitMix(args []string) {
