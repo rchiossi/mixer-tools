@@ -227,6 +227,13 @@ func cmdAddBundles(args []string) {
 }
 
 func cmdInit(args []string) {
+	initcmd := flag.NewFlagSet("init", flag.ExitOnError)
+	confOnlyflag := initcmd.Bool("config-only", false, "Only initialize the builder config")
+	allflag := initcmd.Bool("all", false, "Create a mix with all Clear bundles included")
+	clearflag := initcmd.Int("clearver", 0, "Supply the Clear version to compose the mix from")
+	mixflag := initcmd.Int("mixver", 0, "Supply the Mix version to build")
+	initcmd.Parse(args)
+
 	pwd, err := os.Getwd()
 	if err != nil {
 		helpers.PrintError(err)
@@ -271,6 +278,15 @@ func cmdInit(args []string) {
 
 		err = ioutil.WriteFile(pwd+"/builder.conf", []byte(data), 0666)
 	}
+
+	if *confOnlyflag {
+		return
+	}
+
+	b := builder.New()
+	b.LoadBuilderConf(pwd + "/builder.conf")
+	b.ReadBuilderConf()
+	b.InitMix(strconv.Itoa(*clearflag), strconv.Itoa(*mixflag), *allflag)
 }
 
 func cmdInitMix(args []string) {
