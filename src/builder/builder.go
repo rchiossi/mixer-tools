@@ -200,15 +200,38 @@ func (b *Builder) UpdateRepo(ver string, allbundles bool) {
 				os.Exit(1)
 			}
 			for _, file := range files {
-				helpers.CopyFile(bundles+"/"+file.Name(), clrbundles+file.Name(), true)
+				err := helpers.CopyFile(bundles+"/"+file.Name(), clrbundles+file.Name(), true)
+				if err != nil {
+					helpers.PrintError(err)
+					os.Exit(1)
+				}
 			}
 		} else {
 			// Install only a minimal set of bundles
 			fmt.Println("Adding os-core, os-core-update, kernel-native, bootloader to mix-bundles...")
-			helpers.CopyFile(bundles+"/os-core", clrbundles+"os-core", true)
-			helpers.CopyFile(bundles+"/os-core-update", clrbundles+"os-core-update", true)
-			helpers.CopyFile(bundles+"/kernel-native", clrbundles+"kernel-native", true)
-			helpers.CopyFile(bundles+"/bootloader", clrbundles+"bootloader", true)
+			err := helpers.CopyFile(bundles+"/os-core", clrbundles+"os-core", true)
+			if err != nil {
+				helpers.PrintError(err)
+				os.Exit(1)
+			}
+
+			err = helpers.CopyFile(bundles+"/os-core-update", clrbundles+"os-core-update", true)
+			if err != nil {
+				helpers.PrintError(err)
+				os.Exit(1)
+			}
+
+			err = helpers.CopyFile(bundles+"/kernel-native", clrbundles+"kernel-native", true)
+			if err != nil {
+				helpers.PrintError(err)
+				os.Exit(1)
+			}
+
+			err = helpers.CopyFile(bundles+"/bootloader", clrbundles+"bootloader", true)
+			if err != nil {
+				helpers.PrintError(err)
+				os.Exit(1)
+			}
 		}
 
 		// Save current dir so we can get back to it
@@ -272,7 +295,12 @@ func (b *Builder) AddBundles(bundles []string, force bool, git bool) int {
 			}
 
 			fmt.Printf("Adding bundle %q\n", bundle)
-			helpers.CopyFile(bundledir+bundle, clrbundledir+bundle, true)
+			err := helpers.CopyFile(bundledir+bundle, clrbundledir+bundle, true)
+			if err != nil {
+				helpers.PrintError(err)
+				os.Exit(1)
+			}
+
 			bundleAddCount++
 		} else {
 			fmt.Printf("Warning: bundle %q already exists; skipping.\n", bundle)
