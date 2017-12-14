@@ -61,6 +61,47 @@ func NewFromConfig(conf string) *Builder {
 	return b
 }
 
+// Create a default builder.conf using the active directory as base path for the
+// variables values.
+func (b *Builder) CreateDefaultConfig(builderconf string) {
+	pwd, err := os.Getwd()
+	if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	}
+
+	if builderconf == "" {
+		builderconf = pwd + "/builder.conf"
+	}
+
+	err = helpers.CopyFile(builderconf, "/usr/share/defaults/bundle-chroot-builder/builder.conf", false)
+	if os.IsExist(err) {
+		fmt.Println("File 'builder.conf' already exists. Skipping...")
+		return
+	} else if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Creating new builder.conf configuration file...")
+
+	raw, err := ioutil.ReadFile(builderconf)
+	if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	}
+
+	data := strings.Replace(string(raw), "/home/clr/mix", pwd, -1)
+	data += "\n[Mixer]\n"
+	data += "RPMDIR=" + pwd + "/rpms\n"
+	data += "REPODIR=" + pwd + "/local\n"
+
+	re := regexp.MustCompile("<(.)+>\n")
+	data = re.ReplaceAllString(data, "file://"+pwd+"/update/www\n")
+
+	err = ioutil.WriteFile(builderconf, []byte(data), 0666)
+}
+
 // LoadBuilderConf will read the builder configuration from the command line if
 // it was provided, otherwise it will fall back to reading the configuration from
 // the local builder.conf file.
@@ -190,6 +231,29 @@ func (b *Builder) SignManifestMOM() {
 
 // UpdateRepo will fetch the clr-bundles for our configured Clear Linux version
 func (b *Builder) UpdateRepo(ver string, allbundles bool) {
+	pwd, err := os.Getwd()
+	if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	}
+
+	// Make the folder to store rpms
+	err = os.Mkdir(pwd+"/rpms", 0755)
+	if os.IsExist(err) {
+		fmt.Println("Directory '/rpms' already exists. Skipping...")
+	} else if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	}
+
+	err = os.Mkdir(pwd+"/local", 0755)
+	if os.IsExist(err) {
+		fmt.Println("Directory '/local' already exists. Skipping...")
+	} else if err != nil {
+		helpers.PrintError(err)
+		os.Exit(1)
+	}
+
 	// Make the folder to store all clr-bundles version
 	if _, err := os.Stat("clr-bundles"); err != nil {
 		os.Mkdir("clr-bundles", 0777)
@@ -202,7 +266,7 @@ func (b *Builder) UpdateRepo(ver string, allbundles bool) {
 	}
 
 	URL := "https://github.com/clearlinux/clr-bundles/archive/" + ver + ".tar.gz"
-	err := helpers.Download(repo, URL)
+	err = helpers.Download(repo, URL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Failed to download clr-bundles, make sure the version is valid: %s\n", err)
 		os.Exit(1)
@@ -252,17 +316,12 @@ func (b *Builder) UpdateRepo(ver string, allbundles bool) {
 		}
 
 		// Save current dir so we can get back to it
-		curr, err := os.Getwd()
-		if err != nil {
-			helpers.PrintError(err)
-			os.Exit(1)
-		}
 		os.Chdir(b.Bundledir)
 		helpers.Git("init")
 		helpers.Git("add", ".")
 		commitMsg := fmt.Sprintf("Initial Mix Version %s from Clear Version %s", b.Mixver, b.Clearver)
 		helpers.Git("commit", "-m", commitMsg)
-		os.Chdir(curr)
+		os.Chdir(pwd)
 	}
 
 	fmt.Println("Downloaded " + repo)

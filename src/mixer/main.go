@@ -238,6 +238,7 @@ func cmdInitMix(args []string) {
 	upstreamurl := initcmd.String("upstreamurl", "https://download.clearlinux.org", "Supply an upstream URL to use for mixing")
 	initcmd.Parse(args)
 	b := builder.New()
+	b.CreateDefaultConfig(*initconf)
 	b.LoadBuilderConf(*initconf)
 	b.ReadBuilderConf()
 	b.InitMix(strconv.Itoa(*clearflag), strconv.Itoa(*mixflag), *allflag, *upstreamurl)
