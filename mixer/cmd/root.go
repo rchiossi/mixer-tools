@@ -110,6 +110,7 @@ var initCmd = &cobra.Command{
 		}
 
 		b := builder.New()
+		b.LoadDefaults()
 		if config == "" {
 			// Create default config if necessary
 			if err := b.CreateDefaultConfig(initFlags.localRPMs); err != nil {
@@ -117,9 +118,6 @@ var initCmd = &cobra.Command{
 			}
 		}
 		if err := b.LoadBuilderConf(config); err != nil {
-			fail(err)
-		}
-		if err := b.ReadBuilderConf(); err != nil {
 			fail(err)
 		}
 		err := b.InitMix(initFlags.clearVer, strconv.Itoa(initFlags.mixver), initFlags.allLocal, initFlags.allUpstream, initFlags.upstreamURL, initFlags.git)
