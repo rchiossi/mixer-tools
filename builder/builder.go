@@ -35,7 +35,6 @@ import (
 	"github.com/clearlinux/mixer-tools/helpers"
 	"github.com/clearlinux/mixer-tools/swupd"
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 )
 
 // Version of Mixer. Also used by the Makefile for releases.
@@ -95,73 +94,18 @@ func New() *Builder {
 
 // NewFromConfig creates a new Builder with the given Configuration.
 func NewFromConfig(conf string) (*Builder, error) {
+	var err error
 	b := New()
-	if err := b.LoadBuilderConf(conf); err != nil {
+	if b.BuildConf, err = LoadBuilderConf(conf); err != nil {
 		return nil, err
 	}
-	if err := b.ReadVersions(); err != nil {
+	if err = b.GetProperties(); err != nil {
+		return nil, err
+	}
+	if err = b.ReadVersions(); err != nil {
 		return nil, err
 	}
 	return b, nil
-}
-
-// LoadDefaults set default values for the properties in builder.conf
-func (b *Builder) LoadDefaults() error {
-	pwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	viper.SetDefault("Builder.SERVER_STATE_DIR", filepath.Join(pwd, "update"))
-	viper.SetDefault("Builder.BUNDLE_DIR", filepath.Join(pwd, "mix-bundles"))
-	viper.SetDefault("Builder.YUM_CONF", filepath.Join(pwd, ".yum-mix.conf"))
-	viper.SetDefault("Builder.CERT", filepath.Join(pwd, "Swupd_Root.pem"))
-	viper.SetDefault("Builder.VERSIONS_PATH", pwd)
-
-	viper.SetDefault("swupd.BUNDLE", "os-core-update")
-	viper.SetDefault("swupd.CONTENTURL", "<URL where the content will be hosted>")
-	viper.SetDefault("swupd.VERSIONURL", "<URL where the version of the mix will be hosted>")
-	viper.SetDefault("swupd.FORMAT", "1")
-
-	viper.SetDefault("Server.debuginfo_banned", "true")
-	viper.SetDefault("Server.debuginfo_lib", "/usr/lib/debug")
-	viper.SetDefault("Server.debuginfo_src", "/usr/src/debug")
-
-	viper.SetDefault("Mixer.LOCAL_BUNDLE_DIR", filepath.Join(pwd, "local-bundles"))
-	viper.SetDefault("Mixer.LOCAL_RPM_DIR", "")
-	viper.SetDefault("Mixer.LOCAL_REPO_DIR", "")
-
-	viper.SetConfigName("builder")
-	viper.AddConfigPath(pwd)
-
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
-
-	return nil
-}
-
-// CreateDefaultConfig creates a default builder.conf using the active
-// directory as base path for the variables values.
-func (b *Builder) CreateDefaultConfig(localrpms bool) error {
-	pwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	if localrpms {
-		viper.Set("Mixer.RPMDIR", filepath.Join(pwd, "rpms"))
-		viper.Set("Mixer.REPODIR", filepath.Join(pwd, "local"))
-	}
-
-	fmt.Println("Creating new builder.conf configuration file...")
-
-	if err = viper.WriteConfigAs(filepath.Join(pwd, "builder.toml")); err != nil {
-		return err
-	}
-
-	// For WriteConfig, Viper defines config type based on file extension, so we need
-	// to rename the file after creation
-	return os.Rename(filepath.Join(pwd, "builder.toml"), filepath.Join(pwd, "builder.conf"))
 }
 
 // initDirs creates the directories mixer uses
@@ -301,48 +245,19 @@ func (b *Builder) InitMix(upstreamVer string, mixVer string, allLocal bool, allU
 	return nil
 }
 
-// LoadBuilderConf will read the builder configuration from the command line if
-// it was provided, otherwise it will fall back to reading the configuration from
-// the local builder.conf file.
-func (b *Builder) LoadBuilderConf(builderconf string) error {
-	var config string
-	// If builderconf is set via cmd line, use that one
-	if len(builderconf) > 0 {
-		config = builderconf
-	} else {
-		pwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
+// GetProperties will get builder properties from the config system
+func (b *Builder) GetProperties() error {
+	b.StateDir = GetStringProperty("Builder.SERVER_STATE_DIR")
+	b.BundleDir = GetStringProperty("Builder.BUNDLE_DIR")
+	b.YumConf = GetStringProperty("Builder.YUM_CONF")
+	b.Cert = GetStringProperty("Builder.CERT")
+	b.VersionDir = GetStringProperty("Builder.VERSIONS_PATH")
 
-		config = filepath.Join(pwd, "builder.conf")
-	}
+	b.Format = GetStringProperty("swupd.FORMAT")
 
-	reader, err := os.Open(config)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = reader.Close()
-	}()
-
-	viper.SetConfigType("toml")
-
-	if err := viper.ReadConfig(reader); err != nil {
-		return err
-	}
-
-	b.StateDir = viper.GetString("Builder.SERVER_STATE_DIR")
-	b.BundleDir = viper.GetString("Builder.BUNDLE_DIR")
-	b.YumConf = viper.GetString("Builder.YUM_CONF")
-	b.Cert = viper.GetString("Builder.CERT")
-	b.VersionDir = viper.GetString("Builder.VERSIONS_PATH")
-
-	b.Format = viper.GetString("swupd.FORMAT")
-
-	b.LocalBundleDir = viper.GetString("Mixer.LOCAL_BUNDLE_DIR")
-	b.RepoDir = viper.GetString("Mixer.LOCAL_RPM_DIR")
-	b.RPMDir = viper.GetString("Mixer.LOCAL_REPO_DIR")
+	b.LocalBundleDir = GetStringProperty("Mixer.LOCAL_BUNDLE_DIR")
+	b.RepoDir = GetStringProperty("Mixer.LOCAL_RPM_DIR")
+	b.RPMDir = GetStringProperty("Mixer.LOCAL_REPO_DIR")
 
 	return nil
 }
@@ -912,6 +827,8 @@ func (b *Builder) createMixBundleDir() error {
 	if err := os.MkdirAll(b.BundleDir, 0777); err != nil {
 		return errors.Errorf("Failed to create dir: %s", b.BundleDir)
 	}
+
+	fmt.Println(b.BundleDir)
 
 	// Get the set of bundles for which to build chroots
 	set, err := b.getFullMixBundleSet()
