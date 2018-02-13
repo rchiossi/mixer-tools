@@ -33,6 +33,87 @@ type MixConfig struct {
 	RPMDir         string
 }
 
+type configPair struct {
+	key   string
+	value *string
+}
+
+type configMapping struct {
+	section string
+	pairs   []configPair
+}
+
+func (config *MixConfig) getMapping() []configMapping {
+	return []configMapping{
+		{
+			section: "Builder",
+			pairs: []configPair{
+				{key: "BUNDLE_DIR", value: &config.BundleDir},
+				{"CERT", &config.Cert},
+				{"SERVER_STATE_DIR", &config.StateDir},
+				{"VERSIONS_PATH", &config.VersionDir},
+				{"YUM_CONF", &config.YumConf},
+			}},
+		{
+			section: "swupd",
+			pairs: []configPair{
+				{"BUNDLE", &config.Bundle},
+				{"CONTENTURL", &config.ContentURL},
+				{"FORMAT", &config.Format},
+				{"VERSIONURL", &config.VersionURL},
+			}},
+		{
+			section: "Server",
+			pairs: []configPair{
+				{"debuginfo_banned", &config.DebugInfoBanned},
+				{"debuginfo_lib", &config.DebugInfoLib},
+				{"debuginfo_src", &config.DebugInfoSrc},
+			}},
+		{
+			section: "Mixer",
+			pairs: []configPair{
+				{"LOCAL_BUNDLE_DIR", &config.LocalBundleDir},
+				{"LOCAL_REPO_DIR", &config.RepoDir},
+				{"LOCAL_RPM_DIR", &config.RPMDir},
+			}},
+	}
+}
+
+func (config *MixConfig) mapToIni() (*ini.File, error) {
+	cfg := ini.Empty()
+
+	for _, entry := range config.getMapping() {
+		section, err := cfg.NewSection(entry.section)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, pair := range entry.pairs {
+			if _, err = section.NewKey(pair.key, *pair.value); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return cfg, nil
+}
+
+func (config *MixConfig) mapFromIni(cfg *ini.File) {
+	for _, entry := range config.getMapping() {
+		section, err := cfg.GetSection(entry.section)
+		if err != nil {
+			continue
+		}
+
+		for _, pair := range entry.pairs {
+			key, err := section.GetKey(pair.key)
+			if err == nil {
+				*pair.value = key.String()
+			}
+		}
+	}
+}
+
 func (config *MixConfig) LoadDefaults() error {
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -61,165 +142,6 @@ func (config *MixConfig) LoadDefaults() error {
 	config.LocalBundleDir = filepath.Join(pwd, "local-bundles")
 	config.RPMDir = ""
 	config.RepoDir = ""
-
-	return nil
-}
-
-func (config *MixConfig) mapToIni() (*ini.File, error) {
-	cfg := ini.Empty()
-
-	// [Builder]
-	section, err := cfg.NewSection("Builder")
-	if err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("BUNDLE_DIR", config.BundleDir); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("CERT", config.Cert); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("SERVER_STATE_DIR", config.StateDir); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("VERSIONS_PATH", config.VersionDir); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("YUM_CONF", config.YumConf); err != nil {
-		return nil, err
-	}
-
-	// [Swupd]
-	section, err = cfg.NewSection("swupd")
-	if err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("BUNDLE", config.Bundle); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("CONTENTURL", config.ContentURL); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("FORMAT", config.Format); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("VERSIONURL", config.VersionURL); err != nil {
-		return nil, err
-	}
-
-	// [Server]
-	section, err = cfg.NewSection("Server")
-	if err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("debuginfo_banned", config.DebugInfoBanned); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("debuginfo_lib", config.DebugInfoLib); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("debuginfo_src", config.DebugInfoSrc); err != nil {
-		return nil, err
-	}
-
-	// [Mixer]
-	section, err = cfg.NewSection("Mixer")
-	if err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("LOCAL_BUNDLE_DIR", config.LocalBundleDir); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("LOCAL_REPO_DIR", config.RepoDir); err != nil {
-		return nil, err
-	}
-	if _, err = section.NewKey("LOCAL_RPM_DIR", config.RPMDir); err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
-}
-
-func (config *MixConfig) mapFromIni(cfg *ini.File) error {
-	// [Builder]
-	section, err := cfg.GetSection("Builder")
-	if err == nil {
-		key, err := section.GetKey("BUNDLE_DIR")
-		if err == nil {
-			config.BundleDir = key.String()
-		}
-		key, err = section.GetKey("CERT")
-		if err == nil {
-			config.Cert = key.String()
-		}
-		key, err = section.GetKey("SERVER_STATE_DIR")
-		if err == nil {
-			config.StateDir = key.String()
-		}
-		key, err = section.GetKey("VERSIONS_PATH")
-		if err == nil {
-			config.VersionDir = key.String()
-		}
-		key, err = section.GetKey("YUM_CONF")
-		if err == nil {
-			config.YumConf = key.String()
-		}
-	}
-
-	// [swupd]
-	section, err = cfg.GetSection("swupd")
-	if err == nil {
-		key, err := section.GetKey("BUNDLE")
-		if err == nil {
-			config.Bundle = key.String()
-		}
-		key, err = section.GetKey("CONTENTURL")
-		if err == nil {
-			config.ContentURL = key.String()
-		}
-		key, err = section.GetKey("FORMAT")
-		if err == nil {
-			config.Format = key.String()
-		}
-		key, err = section.GetKey("VERSIONURL")
-		if err == nil {
-			config.VersionURL = key.String()
-		}
-	}
-
-	// [Server]
-	section, err = cfg.GetSection("Server")
-	if err == nil {
-		key, err := section.GetKey("debuginfo_banned")
-		if err == nil {
-			config.DebugInfoBanned = key.String()
-		}
-		key, err = section.GetKey("debuginfo_lib")
-		if err == nil {
-			config.DebugInfoLib = key.String()
-		}
-		key, err = section.GetKey("debuginfo_src")
-		if err == nil {
-			config.DebugInfoSrc = key.String()
-		}
-	}
-
-	// [Mixer]
-	section, err = cfg.GetSection("Mixer")
-	if err == nil {
-		key, err := section.GetKey("LOCAL_BUNDLE_DIR")
-		if err == nil {
-			config.LocalBundleDir = key.String()
-		}
-		key, err = section.GetKey("LOCAL_REPO_DIR")
-		if err == nil {
-			config.RepoDir = key.String()
-		}
-		key, err = section.GetKey("LOCAL_RPM_DIR")
-		if err == nil {
-			config.RPMDir = key.String()
-		}
-	}
 
 	return nil
 }
@@ -264,5 +186,7 @@ func (config *MixConfig) LoadConfig(filename string) error {
 		return err
 	}
 
-	return config.mapFromIni(cfg)
+	config.mapFromIni(cfg)
+
+	return nil
 }
