@@ -36,7 +36,7 @@ var rpmCmds = []*cobra.Command{
 func init() {
 	for _, cmd := range rpmCmds {
 		RootCmd.AddCommand(cmd)
-		cmd.Flags().StringVarP(&config, "config", "c", "", "Builder config to use")
+		cmd.Flags().StringVarP(&configFile, "config", "c", "", "Builder config to use")
 	}
 
 	externalDeps[addRPMCmd] = []string{
@@ -46,7 +46,7 @@ func init() {
 }
 
 func runAddRPM(cmd *cobra.Command, args []string) {
-	b, err := builder.NewFromConfig(config)
+	b, err := builder.NewFromConfig(configFile)
 	if err != nil {
 		fail(err)
 	}
