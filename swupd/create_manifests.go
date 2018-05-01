@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/clearlinux/mixer-tools/config"
 )
 
 // UpdateInfo contains the meta information for the current update
@@ -34,8 +36,8 @@ type UpdateInfo struct {
 	timeStamp   time.Time
 }
 
-func initBuildEnv(c config) error {
-	tmpDir := filepath.Join(c.stateDir, "temp")
+func initBuildEnv(c config.Mixconfig) error {
+	tmpDir := filepath.Join(c.Builder.ServerStateDir, "temp")
 	// remove old directory
 	if err := os.RemoveAll(tmpDir); err != nil {
 		return err
@@ -178,19 +180,12 @@ func processBundles(ui UpdateInfo, c config) ([]*Manifest, error) {
 }
 
 // CreateManifests creates update manifests for changed and added bundles for <version>
-func CreateManifests(version uint32, minVersion uint32, format uint, statedir string) (*MoM, error) {
+func CreateManifests(c config.Mixconfig, version uint32, minVersion uint32, format uint, statedir string) (*MoM, error) {
 	var err error
-	var c config
 
 	if minVersion > version {
 		return nil, fmt.Errorf("minVersion (%v), must be between 0 and %v (inclusive)",
 			minVersion, version)
-	}
-
-	c, err = getConfig(statedir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Found server.ini, but was unable to read it. "+
-			"Continuing with default configuration\n")
 	}
 
 	if err = initBuildEnv(c); err != nil {
@@ -198,14 +193,14 @@ func CreateManifests(version uint32, minVersion uint32, format uint, statedir st
 	}
 
 	var groups []string
-	if groups, err = readGroupsINI(filepath.Join(c.stateDir, "groups.ini")); err != nil {
+	if groups, err = readGroupsINI(filepath.Join(c.Builder.ServerStateDir, "groups.ini")); err != nil {
 		return nil, err
 	}
 
 	groups = append(groups, "full")
 
 	var lastVersion uint32
-	lastVersion, err = readLastVerFile(filepath.Join(c.imageBase, "LAST_VER"))
+    lastVersion, err = readLastVerFile(filepath.Join(c.Builder.ServerStateDir, "image", "LAST_VER"))
 	if err != nil {
 		return nil, err
 	}
