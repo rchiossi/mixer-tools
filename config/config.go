@@ -49,6 +49,10 @@ type builderConf struct {
 	ServerStateDir string `required:"true" toml:"SERVER_STATE_DIR"`
 	VersionPath    string `required:"true" toml:"VERSIONS_PATH"`
 	DNFConf        string `required:"true" toml:"YUM_CONF"`
+	//TODO: Change required to true when old config is removed
+	MixVer      string `required:"false" toml:"MIX_VERSION"`
+	UpstreamVer string `required:"false" toml:"UPSTREAM_VERSION"`
+	UpstreamURL string `required:"false" toml:"UPSTREAM_URL"`
 }
 
 type swupdConf struct {
@@ -89,6 +93,9 @@ func (config *MixConfig) LoadDefaultsForPath(localrpms bool, path string) {
 	config.Builder.ServerStateDir = filepath.Join(path, "update")
 	config.Builder.VersionPath = path
 	config.Builder.DNFConf = filepath.Join(path, ".yum-mix.conf")
+	config.Builder.MixVer = "10"
+	config.Builder.UpstreamVer = "latest"
+	config.Builder.UpstreamURL = "https://download.clearlinux.org"
 
 	// [Swupd]
 	config.Swupd.Bundle = "os-core-update"
@@ -138,6 +145,10 @@ func (config *MixConfig) CreateDefaultConfig(localrpms bool) error {
 func (config *MixConfig) SaveConfig() error {
 	if !UseNewConfig {
 		return errors.Errorf("SaveConfig can only be used with --new-config flag")
+	}
+
+	if err := config.getUpstreamVersionIfNeeded(); err != nil {
+		return err
 	}
 
 	w, err := os.OpenFile(config.filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
@@ -431,4 +442,17 @@ func (config *MixConfig) initConfigPath(path string) error {
 func (config *MixConfig) GetConfigFileName() string {
 	/* This variable cannot be public or else it will be added to the config file */
 	return config.filename
+}
+
+func (config *MixConfig) getUpstreamVersionIfNeeded() error {
+	if config.Builder.UpstreamVer != "latest" {
+		return nil
+	}
+
+	var err error
+	if config.Builder.UpstreamVer, err = helpers.DownloadFile(config.Builder.UpstreamURL, "/latest"); err != nil {
+		return err
+	}
+
+	return nil
 }
