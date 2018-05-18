@@ -109,6 +109,9 @@ func NewFromConfig(conf string) (*Builder, error) {
 	if err := b.ReadVersions(); err != nil {
 		return nil, err
 	}
+	if err := b.parseUintVersions(); err != nil {
+		return nil, err
+	}
 	return b, nil
 }
 
@@ -328,6 +331,11 @@ func (b *Builder) ReadVersions() error {
 		b.UpstreamURL = strings.Replace(b.UpstreamURL, "\n", "", -1)
 	}
 
+	return nil
+}
+
+func (b *Builder) parseUintVersions() error {
+	var err error
 	// Parse strings into valid version numbers.
 	b.MixVerUint32, err = parseUint32(b.MixVer)
 	if err != nil {
