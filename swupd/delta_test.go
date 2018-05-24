@@ -11,7 +11,7 @@ import (
 func TestCreateDeltas(t *testing.T) {
 	ts := newTestSwupd(t, "deltas")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle1", "test-bundle2"}
+	ts.addBundles("test-bundle1", "test-bundle2")
 	ts.addFile(10, "test-bundle1", "/foo", strings.Repeat("foo", 100))
 	ts.addFile(10, "test-bundle2", "/bar", strings.Repeat("bar", 100))
 	ts.createManifests(10)
@@ -28,7 +28,7 @@ func TestCreateDeltas(t *testing.T) {
 func TestCreateDeltaTooBig(t *testing.T) {
 	ts := newTestSwupd(t, "delta-too-big")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.addFile(10, "test-bundle", "/foo", strings.Repeat("foo", 100))
 	ts.createManifests(10)
 	ts.createFullfiles(10)
@@ -47,7 +47,7 @@ func TestCreateDeltaTooBig(t *testing.T) {
 func TestCreateDeltaFULLDL(t *testing.T) {
 	ts := newTestSwupd(t, "delta-fulldl")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.addFile(10, "test-bundle", "/foo", strings.Repeat("0", 300))
 	ts.createManifests(10)
 	ts.createFullfiles(10)
@@ -68,7 +68,6 @@ m,cvnxcpowertw54lsi8ydoprf g,mdbng.c,mvnxb,.mxhstu;lwey5o;sdfjklgx;cnvjnxbasdfh`
 func TestNoDeltasForTypeChangesOrDereferencedSymlinks(t *testing.T) {
 	ts := newTestSwupd(t, "no-deltas-")
 	defer ts.cleanup()
-	ts.Bundles = []string{"os-core"}
 
 	// NOTE: Currently the delta is compared to the real file, but a better
 	// approximation comparison would be with a compressed version of the real file

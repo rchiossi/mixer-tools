@@ -11,7 +11,7 @@ func TestIncludeVersionBump(t *testing.T) {
 	defer ts.cleanup()
 
 	// Version 10.
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.write("image/10/test-bundle/foo", "foo")
 	ts.createManifestsFromChroots(10)
 	ts.createFullfiles(10)
@@ -26,13 +26,14 @@ func TestIncludeVersionBump(t *testing.T) {
 	checkFileInManifest(t, m10, 10, "/foo")
 
 	// Version 20. Add "included" and "included-two" to be included by "test-bundle".
-	ts.Bundles = append(ts.Bundles, "included", "included-two")
+	ts.addBundles("included", "included-two")
 	ts.copyChroots(10, 20)
 	ts.write("image/20/included/bar", "bar")
 	ts.write("image/20/included-two/baz", "baz")
 	ts.write("image/20/noship/test-bundle-includes", "included\nincluded-two")
 	ts.createManifestsFromChroots(20)
 	ts.createFullfiles(20)
+	ts.t.Fatal("stop here")
 
 	ts.createPack("os-core", 0, 20, ts.path("image"))
 	ts.createPack("test-bundle", 0, 20, ts.path("image"))
@@ -51,7 +52,7 @@ func TestIncludeVersionBump(t *testing.T) {
 	checkFileInManifest(t, ts.parseManifest(20, "included-two"), 20, "/baz")
 
 	// Version 30. Add "included-nested" to be included by "included".
-	ts.Bundles = append(ts.Bundles, "included-nested")
+	ts.addBundles("included-nested")
 	ts.copyChroots(20, 30)
 	ts.write("image/30/included-nested/foobarbaz", "foobarbaz")
 	ts.write("image/30/noship/test-bundle-includes", "included\nincluded-two")
@@ -83,7 +84,7 @@ func TestFullRun(t *testing.T) {
 	ts := newTestSwupd(t, "full-run-")
 	defer ts.cleanup()
 
-	ts.Bundles = []string{"os-core", "test-bundle"}
+	ts.addBundles("test-bundle")
 
 	ts.write("image/10/test-bundle/foo", "foo")
 	ts.createManifestsFromChroots(10)
@@ -123,7 +124,7 @@ func TestFullRunDelta(t *testing.T) {
 	content := strings.Repeat("CONTENT", 1000)
 
 	// Version 10.
-	ts.Bundles = []string{"os-core", "test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.write("image/10/test-bundle/largefile", content)
 	ts.write("image/10/test-bundle/foo", "foo")
 	ts.write("image/10/test-bundle/foobarbaz", "foobarbaz")
@@ -144,7 +145,7 @@ func TestFullRunDelta(t *testing.T) {
 	checkFileInManifest(t, testBundle10, 10, "/foobarbaz")
 
 	// Version 20 adds new bundles and copy some files to them.
-	ts.Bundles = append(ts.Bundles, "included", "included-two", "included-nested")
+	ts.addBundles("included", "included-two", "included-nested")
 	ts.write("image/20/test-bundle/largefile", content+"delta")
 	ts.write("image/20/test-bundle/foo", "foo")
 	ts.write("image/20/included/foo", "foo")
@@ -190,7 +191,7 @@ func TestFullRunDelta(t *testing.T) {
 func TestAddFilesToBundleInfo(t *testing.T) {
 	ts := newTestSwupd(t, "extra-files")
 	defer ts.cleanup()
-	ts.Bundles = []string{"os-core", "test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.addFile(10, "test-bundle", "/foo", "foo content")
 	ts.addExtraFile(10, "test-bundle", "/bar", "bar content")
 	ts.addExtraFile(10, "test-bundle", "/baz", "baz content")

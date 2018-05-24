@@ -258,7 +258,7 @@ func aggregateManifests(newManifests []*Manifest, newMoM *Manifest, version uint
 }
 
 // CreateManifests creates update manifests for changed and added bundles for <version>
-func CreateManifests(version uint32, minVersion uint32, format uint, statedir string) (*MoM, error) {
+func CreateManifests(groups []string, version uint32, minVersion uint32, format uint, statedir string) (*MoM, error) {
 	var err error
 	var c config
 
@@ -274,11 +274,6 @@ func CreateManifests(version uint32, minVersion uint32, format uint, statedir st
 	}
 
 	if err = initBuildEnv(c); err != nil {
-		return nil, err
-	}
-
-	var groups []string
-	if groups, err = readGroupsINI(filepath.Join(c.stateDir, "groups.ini")); err != nil {
 		return nil, err
 	}
 

@@ -638,6 +638,27 @@ func (b *Builder) getFullMixBundleSet() (bundleSet, error) {
 	return set, nil
 }
 
+func (b *Builder) getFullMixBundleList() ([]string, error) {
+	set, err := b.getFullMixBundleSet()
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate set and compute AllPackages
+	if err = validateAndFillBundleSet(set); err != nil {
+		return nil, err
+	}
+
+	list := make([]string, len(set))
+	i := 0
+	for _, bundle := range set {
+		list[i] = bundle.Name
+		i++
+	}
+
+	return list, nil
+}
+
 // AddBundles adds the specified bundles to the Mix Bundles List. Values are
 // verified as valid, and duplicate values are removed. The resulting Mix
 // Bundles List will be in sorted order.
@@ -1472,7 +1493,11 @@ func (b *Builder) buildUpdateContent(timer *stopWatch, minVersion uint32, format
 		return errors.Wrapf(err, "failed to write update metadata files")
 	}
 	timer.Start("CREATE MANIFESTS")
-	mom, err := swupd.CreateManifests(b.MixVerUint32, minVersion, uint(format), b.Config.Builder.ServerStateDir)
+	groups, err := b.getFullMixBundleList()
+	if err != nil {
+		return errors.Wrapf(err, "failed to generate bundles list")
+	}
+	mom, err := swupd.CreateManifests(groups, b.MixVerUint32, minVersion, uint(format), b.Config.Builder.ServerStateDir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create update metadata")
 	}

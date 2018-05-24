@@ -187,7 +187,7 @@ func TestCreatePackZeroPacks(t *testing.T) {
 	// generated during ts.createManifests
 	const emptyFile = 1
 
-	ts.Bundles = []string{"editors", "shells"}
+	ts.addBundles("editors", "shells")
 
 	// In version 10, create two bundles and pass the chrootDir to pack creation.
 	ts.addFile(10, "editors", "/emacs", "emacs contents")
@@ -259,7 +259,7 @@ func TestCreatePackNonConsecutiveDeltas(t *testing.T) {
 	ts := newTestSwupd(t, "create-pack-ncd")
 	defer ts.cleanup()
 
-	ts.Bundles = []string{"os-core", "contents"}
+	ts.addBundles("contents")
 
 	contents := strings.Repeat("large", 1000)
 	if len(contents) < minimumSizeToMakeDeltaInBytes {
@@ -332,23 +332,24 @@ func TestCreatePackWithDelta(t *testing.T) {
 		t.Fatal("test contents sizes are invalid")
 	}
 
-	mustInitStandardTest(t, fs.Dir, "0", "10", []string{"contents"})
+	bundles := []string{"os-core", "contents"}
+	mustInitStandardTest(t, fs.Dir, "0", "10", bundles)
 	fs.write("image/10/contents/small1", emptyContents)
 	fs.write("image/10/contents/small2", smallContents)
 	fs.write("image/10/contents/large1", largeContents)
 	fs.write("image/10/contents/large2", largeContents)
-	mustCreateManifests(t, 10, minVer, format, fs.Dir)
+	mustCreateManifests(t, bundles, 10, minVer, format, fs.Dir)
 
 	//
 	// In version 20, swap the content of small files, and modify the large files
 	// changing one byte or all bytes.
 	//
-	mustInitStandardTest(t, fs.Dir, "10", "20", []string{"contents"})
+	mustInitStandardTest(t, fs.Dir, "10", "20", bundles)
 	fs.write("image/20/contents/small1", smallContents)
 	fs.write("image/20/contents/small2", smallContents)
 	fs.write("image/20/contents/large1", strings.ToUpper(largeContents[:1])+largeContents[1:])
 	fs.write("image/20/contents/large2", largeContents[:1]+strings.ToUpper(largeContents[1:]))
-	mustCreateManifests(t, 20, minVer, format, fs.Dir)
+	mustCreateManifests(t, bundles, 20, minVer, format, fs.Dir)
 
 	info := mustCreatePack(t, "contents", 10, 20, fs.path("www"), fs.path("image"))
 	mustHaveDeltaCount(t, info, 2)
@@ -356,10 +357,10 @@ func TestCreatePackWithDelta(t *testing.T) {
 	//
 	// In version 30, make a change to one large files from 20.
 	//
-	mustInitStandardTest(t, fs.Dir, "20", "30", []string{"contents"})
+	mustInitStandardTest(t, fs.Dir, "20", "30", bundles)
 	fs.cp("image/20/contents", "image/30")
 	fs.write("image/30/contents/large1", strings.ToUpper(largeContents[:2])+largeContents[2:])
-	mustCreateManifests(t, 30, minVer, format, fs.Dir)
+	mustCreateManifests(t, bundles, 30, minVer, format, fs.Dir)
 
 	// Pack between 20 and 30 has only a delta for large1.
 	info = mustCreatePack(t, "contents", 20, 30, fs.path("www"), fs.path("image"))
@@ -374,12 +375,13 @@ func TestCreatePackWithIncompleteChrootDir(t *testing.T) {
 	fs := newTestFileSystem(t, "create-pack-")
 	defer fs.cleanup()
 
-	mustInitStandardTest(t, fs.Dir, "0", "10", []string{"editors"})
+	bundles := []string{"os-core", "editors"}
+	mustInitStandardTest(t, fs.Dir, "0", "10", bundles)
 	fs.write("image/10/editors/emacs", "emacs contents")
 	fs.write("image/10/editors/joe", "joe contents")
 	fs.write("image/10/editors/vim", "vim contents")
 	fs.write("image/10/editors/vi", "vim contents") // Same content as vim!
-	mom := mustCreateManifestsStandard(t, 10, fs.Dir)
+	mom := mustCreateManifestsStandard(t, bundles, 10, fs.Dir)
 
 	// Make the chrootDir incomplete.
 	fs.rm("image/10/full/emacs")
@@ -572,7 +574,6 @@ func TestTwoDeltasForTheSameTarget(t *testing.T) {
 	content := strings.Repeat("CONTENT", 1000)
 
 	// Version 10.
-	ts.Bundles = []string{"os-core"}
 	ts.addFile(10, "os-core", "/fileA", content+"A")
 	ts.addFile(10, "os-core", "/fileB", content+"B")
 	ts.createManifests(10)
@@ -600,8 +601,6 @@ func TestTwoDeltasForTheSameTarget(t *testing.T) {
 func TestPackRenames(t *testing.T) {
 	ts := newTestSwupd(t, "packing-renames-")
 	defer ts.cleanup()
-
-	ts.Bundles = []string{"os-core"}
 
 	content := strings.Repeat("CONTENT", 1000)
 

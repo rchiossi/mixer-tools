@@ -653,16 +653,6 @@ src=%s
 	if err != nil {
 		return err
 	}
-	// TODO: If we are using INI files that are case insensitive, we need to be more restrictive
-	// in bundleset to check for that. See also readGroupsINI in swupd package.
-	var groupsINI bytes.Buffer
-	for _, bundle := range set {
-		fmt.Fprintf(&groupsINI, "[%s]\ngroup=%s\n\n", bundle.Name, bundle.Name)
-	}
-	err = ioutil.WriteFile(filepath.Join(b.Config.Builder.ServerStateDir, "groups.ini"), groupsINI.Bytes(), 0644)
-	if err != nil {
-		return err
-	}
 
 	// Mixer is used to create both Clear Linux or a mix of it.
 	var version string
@@ -687,7 +677,6 @@ src=%s
 		return err
 	}
 	for name, bundle := range set {
-		// TODO: Should we embed this information in groups.ini? (Maybe rename it to bundles.ini)
 		var includes bytes.Buffer
 		for _, inc := range bundle.DirectIncludes {
 			fmt.Fprintf(&includes, "%s\n", inc)

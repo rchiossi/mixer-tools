@@ -21,7 +21,6 @@ func mustInitStandardTest(t *testing.T, testDir, lastVer, ver string, bundles []
 	t.Helper()
 	mustInitTestDir(t, testDir)
 	mustInitServerINI(t, testDir)
-	mustInitGroupsINI(t, testDir, bundles)
 	for _, b := range bundles {
 		mustTrackBundle(t, testDir, ver, b)
 	}
@@ -35,18 +34,6 @@ func mustInitTestDir(t *testing.T, path string) {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(path, "www"), os.ModePerm); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func mustInitGroupsINI(t *testing.T, testDir string, bundles []string) {
-	t.Helper()
-	bs := []byte("[os-core]\ngroup=os-core\nstatus=ACTIVE\n")
-	for _, b := range bundles {
-		bs = append(bs, []byte(fmt.Sprintf("[%s]\ngroup=%s\nstatus=ACTIVE\n", b, b))...)
-	}
-
-	if err := ioutil.WriteFile(filepath.Join(testDir, "groups.ini"), bs, 0644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -174,14 +161,14 @@ func mustNotExist(t *testing.T, name string) {
 	}
 }
 
-func mustCreateManifestsStandard(t *testing.T, ver uint32, testDir string) *MoM {
+func mustCreateManifestsStandard(t *testing.T, bundles []string, ver uint32, testDir string) *MoM {
 	t.Helper()
-	return mustCreateManifests(t, ver, 0, 1, testDir)
+	return mustCreateManifests(t, bundles, ver, 0, 1, testDir)
 }
 
-func mustCreateManifests(t *testing.T, ver uint32, minVer uint32, format uint, testDir string) *MoM {
+func mustCreateManifests(t *testing.T, bundles []string, ver uint32, minVer uint32, format uint, testDir string) *MoM {
 	t.Helper()
-	mom, err := CreateManifests(ver, minVer, format, testDir)
+	mom, err := CreateManifests(bundles, ver, minVer, format, testDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -687,14 +674,18 @@ func newTestSwupd(t *testing.T, prefix string) *testSwupd {
 
 	return &testSwupd{
 		testFileSystem: fs,
+		Bundles:        []string{"os-core"},
 		Format:         1,
 	}
+}
+
+func (ts *testSwupd) addBundles(bundles ...string) {
+	ts.Bundles = append(ts.Bundles, bundles...)
 }
 
 // Create Manifests and bump to next version.
 func (ts *testSwupd) createManifests(version uint32) *MoM {
 	ts.t.Helper()
-	mustInitGroupsINI(ts.t, ts.Dir, ts.Bundles)
 
 	for _, name := range ts.Bundles {
 		ts.addFile(version, name, filepath.Join("/usr/share/clear/bundles", name), "")
@@ -703,7 +694,7 @@ func (ts *testSwupd) createManifests(version uint32) *MoM {
 	osRelease := fmt.Sprintf("VERSION_ID=%d\n", version)
 	ts.addFile(version, "os-core", "/usr/lib/os-release", osRelease)
 
-	mom, err := CreateManifests(version, ts.MinVersion, ts.Format, ts.Dir)
+	mom, err := CreateManifests(ts.Bundles, version, ts.MinVersion, ts.Format, ts.Dir)
 	if err != nil {
 		ts.t.Fatalf("error creating manifests for version %d: %s", version, err)
 	}
@@ -715,7 +706,6 @@ func (ts *testSwupd) createManifests(version uint32) *MoM {
 
 func (ts *testSwupd) createManifestsFromChroots(version uint32) *MoM {
 	ts.t.Helper()
-	mustInitGroupsINI(ts.t, ts.Dir, ts.Bundles)
 
 	for _, name := range ts.Bundles {
 		ts.write(filepath.Join("image", fmt.Sprint(version), name, "usr/share/clear/bundles", name), "")
@@ -724,7 +714,7 @@ func (ts *testSwupd) createManifestsFromChroots(version uint32) *MoM {
 	osRelease := fmt.Sprintf("VERSION_ID=%d\n", version)
 	ts.write(filepath.Join("image", fmt.Sprint(version), "os-core", "usr/lib/os-release"), osRelease)
 
-	mom, err := CreateManifests(version, ts.MinVersion, ts.Format, ts.Dir)
+	mom, err := CreateManifests(ts.Bundles, version, ts.MinVersion, ts.Format, ts.Dir)
 	if err != nil {
 		ts.t.Fatalf("error creating manifests for version %d: %s", version, err)
 	}

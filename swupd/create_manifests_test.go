@@ -27,7 +27,7 @@ func TestInitBuildEnv(t *testing.T) {
 }
 
 func TestCreateManifestsBadMinVersion(t *testing.T) {
-	if _, err := CreateManifests(10, 20, 1, "testdir"); err == nil {
+	if _, err := CreateManifests(nil, 10, 20, 1, "testdir"); err == nil {
 		t.Error("No error raised with invalid minVersion (20) for version 10")
 	}
 }
@@ -36,7 +36,7 @@ func TestCreateManifestsBasic(t *testing.T) {
 	ts := newTestSwupd(t, "basic")
 	defer ts.cleanup()
 
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 
 	ts.addFile(10, "test-bundle", "/foo", "content")
 	ts.createManifests(10)
@@ -80,7 +80,7 @@ func TestCreateManifestsBasic(t *testing.T) {
 func TestCreateManifestsDeleteNoVerBump(t *testing.T) {
 	ts := newTestSwupd(t, "delete-no-version-bump")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle1", "test-bundle2"}
+	ts.addBundles("test-bundle1", "test-bundle2")
 	ts.addFile(10, "test-bundle1", "/foo", "content")
 	ts.addFile(10, "test-bundle2", "/foo", "content")
 	ts.createManifests(10)
@@ -105,7 +105,7 @@ func TestCreateManifestIllegalChar(t *testing.T) {
 func TestCreateManifestDebuginfo(t *testing.T) {
 	ts := newTestSwupd(t, "debuginfo-banned")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	files := []string{"/usr/bin/foobar", "/usr/lib/debug/foo", "/usr/src/debug/bar"}
 	for _, f := range files {
 		ts.addFile(10, "test-bundle", f, "content")
@@ -123,8 +123,6 @@ func TestCreateManifestFormatNoDecrement(t *testing.T) {
 	ts := newTestSwupd(t, "format-no-decrement-")
 	defer ts.cleanup()
 
-	ts.Bundles = []string{"os-core"}
-
 	ts.addFile(10, "os-core", "/foo", "foo")
 	ts.addFile(10, "os-core", "/bar", "bar")
 	ts.Format = 3
@@ -133,13 +131,13 @@ func TestCreateManifestFormatNoDecrement(t *testing.T) {
 	ts.copyChroots(10, 20)
 
 	// Using a decremented format results in failure.
-	_, err := CreateManifests(20, 0, ts.Format-1, ts.Dir)
+	_, err := CreateManifests(ts.Bundles, 20, 0, ts.Format-1, ts.Dir)
 	if err == nil {
 		t.Fatal("unexpected success calling create manifests with decremented format")
 	}
 
 	ts.addFile(20, "os-core", "/bar", "bar")
-	_, err = CreateManifests(20, 0, ts.Format, ts.Dir)
+	_, err = CreateManifests(ts.Bundles, 20, 0, ts.Format, ts.Dir)
 	if err != nil {
 		t.Fatalf("create manifests with same format as before failed: %s", err)
 	}
@@ -158,7 +156,7 @@ func TestCreateManifestFormat(t *testing.T) {
 func TestCreateManifestGhosted(t *testing.T) {
 	ts := newTestSwupd(t, "ghosted")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.addFile(10, "test-bundle", "/usr/lib/kernel/bar", "bar")
 	ts.createManifests(10)
 
@@ -198,7 +196,7 @@ func TestCreateManifestGhosted(t *testing.T) {
 func TestCreateManifestIncludesDeduplicate(t *testing.T) {
 	ts := newTestSwupd(t, "includes-dedup")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle1", "test-bundle2"}
+	ts.addBundles("test-bundle1", "test-bundle2")
 	ts.addIncludes(10, "test-bundle2", []string{"test-bundle1", "test-bundle1"})
 	ts.addFile(10, "test-bundle1", "/test1", "/test1")
 	ts.addFile(10, "test-bundle2", "/test2", "/test2")
@@ -218,7 +216,7 @@ func TestCreateManifestDeletes(t *testing.T) {
 	ts := newTestSwupd(t, "deletes")
 	defer ts.cleanup()
 
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.addFile(10, "test-bundle", "/test", "test")
 	ts.createManifests(10)
 	ts.createManifests(20)
@@ -254,7 +252,7 @@ func TestCreateManifestsEmptyDir(t *testing.T) {
 func TestCreateManifestsMoM(t *testing.T) {
 	ts := newTestSwupd(t, "MoM")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle1", "test-bundle2", "test-bundle3", "test-bundle4"}
+	ts.addBundles("test-bundle1", "test-bundle2", "test-bundle3", "test-bundle4")
 	ts.createManifests(10)
 
 	// initial update, all manifests should be present at this version
@@ -311,7 +309,7 @@ func TestCreateManifestsMoM(t *testing.T) {
 func TestCreateManifestMaximizeFull(t *testing.T) {
 	ts := newTestSwupd(t, "max-full")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle1", "test-bundle2"}
+	ts.addBundles("test-bundle1", "test-bundle2")
 	ts.addFile(10, "test-bundle1", "/foo", "foo")
 	ts.createManifests(10)
 
@@ -328,7 +326,7 @@ func TestCreateManifestMaximizeFull(t *testing.T) {
 func TestCreateManifestResurrect(t *testing.T) {
 	ts := newTestSwupd(t, "resurrect-file")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.addFile(10, "test-bundle", "/foo", "foo")
 	ts.addFile(10, "test-bundle", "/foo1", "foo1")
 	ts.createManifests(10)
@@ -346,7 +344,7 @@ func TestCreateManifestResurrect(t *testing.T) {
 func TestCreateManifestsManifestVersion(t *testing.T) {
 	ts := newTestSwupd(t, "manifest-version")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.addFile(10, "test-bundle", "/foo", "foo")
 	ts.createManifests(10)
 
@@ -370,7 +368,7 @@ func TestCreateManifestsMinVersion(t *testing.T) {
 	ts := newTestSwupd(t, "minVersion")
 	defer ts.cleanup()
 
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.addFile(10, "test-bundle", "/foo", "foo")
 	ts.createManifests(10)
 
@@ -395,7 +393,7 @@ func TestCreateManifestsMinVersion(t *testing.T) {
 func TestCreateManifestsPersistDeletes(t *testing.T) {
 	ts := newTestSwupd(t, "persistDeletes")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle"}
+	ts.addBundles("test-bundle")
 	ts.addFile(10, "test-bundle", "/foo", "foo")
 	ts.createManifests(10)
 
@@ -432,7 +430,7 @@ func TestContentSizeAcrossVersionsIncludes(t *testing.T) {
 	// Create a couple updates to both check that contentsize does not add included
 	// bundles and to verify that files changed in previous updates are counted.
 
-	ts.Bundles = []string{"test-bundle0", "test-bundle1", "test-bundle2"}
+	ts.addBundles("test-bundle0", "test-bundle1", "test-bundle2")
 
 	// Check that contentsize does not add included bundle.
 	ts.addFile(10, "test-bundle1", "/foo", "foo\n")       // 4 bytes
@@ -505,7 +503,7 @@ func TestSubtractDelete(t *testing.T) {
 	ts := newTestSwupd(t, "subtract-delete-")
 	defer ts.cleanup()
 
-	ts.Bundles = []string{"os-core", "test-bundle"}
+	ts.addBundles("test-bundle")
 
 	// Version 10. Start with both bundles containing foo.
 	ts.addFile(10, "os-core", "/foo", "foo\n")
@@ -540,7 +538,7 @@ func TestSubtractManifestsNested(t *testing.T) {
 	ts := newTestSwupd(t, "subtract-nested-")
 	defer ts.cleanup()
 
-	ts.Bundles = []string{"os-core", "test-bundle", "included", "included-nested"}
+	ts.addBundles("test-bundle", "included", "included-nested")
 
 	// os-core file
 	ts.addFile(10, "os-core", "/os-core-file", "os-core-file")
@@ -586,7 +584,7 @@ func TestSubtractManifestsNested(t *testing.T) {
 func TestCreateManifestsIndexContents(t *testing.T) {
 	ts := newTestSwupd(t, "index")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle1", "test-bundle2"}
+	ts.addBundles("test-bundle1", "test-bundle2")
 	ts.addFile(10, "test-bundle1", "/bar", "bar")
 	ts.addFile(10, "test-bundle2", "/foo", "foo")
 	ts.createManifests(10)
@@ -620,7 +618,7 @@ func TestCreateManifestsIndexContents(t *testing.T) {
 func TestCreateManifestsIndexInclude(t *testing.T) {
 	ts := newTestSwupd(t, "index-include")
 	defer ts.cleanup()
-	ts.Bundles = []string{"test-bundle1", "test-bundle2"}
+	ts.addBundles("test-bundle1", "test-bundle2")
 	ts.addIncludes(10, "test-bundle2", []string{"os-core-update-index"})
 	ts.addFile(10, "test-bundle1", "/foo", "foo")
 	ts.createManifests(10)
@@ -632,7 +630,7 @@ func TestNoUpdateStateFiles(t *testing.T) {
 	ts := newTestSwupd(t, "no-update-boot-files")
 	defer ts.cleanup()
 
-	ts.Bundles = []string{"os-core", "test-bundle"}
+	ts.addBundles("test-bundle")
 
 	// Version 10
 	ts.addFile(10, "test-bundle", "/usr/lib/kernel/file", "content")
