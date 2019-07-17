@@ -203,7 +203,7 @@ func (m *Manifest) CheckHeaderIsValid() error {
 
 	// Iterative manifests updated to include new bundles can have 0 files.
 	if m.Header.FileCount == 0 && m.Type != ManifestIterative {
-		return errors.New("manifest has a zero file count")
+		return errors.New("manifest has a zero file count - " + m.Name)
 	}
 
 	if m.Header.TimeStamp.IsZero() {
@@ -369,7 +369,6 @@ func (m *Manifest) WriteManifestFile(path string) error {
 	err = m.WriteManifest(f)
 	if err != nil {
 		_ = f.Close()
-		_ = os.Remove(path)
 		return err
 	}
 	return f.Close()
