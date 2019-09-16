@@ -2,7 +2,7 @@ language: go
 sudo: required
 
 go:
-    - 1.11
+    - 1.13
 
 go_import_path: github.com/clearlinux/mixer-tools
 
