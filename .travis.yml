@@ -2,15 +2,29 @@ language: go
 sudo: required
 
 go:
-    - 1.11
+    - 1.13
 
 go_import_path: github.com/clearlinux/mixer-tools
 
-services:
-    - docker
+sudo: required
 
 before_install:
-    - docker build -t testdock .
+    - sudo apt-get install -y yum rpm
+    - wget https://download.fedoraproject.org/pub/fedora/linux/releases/30/Everything/x86_64/os/Packages/f/fedora-repos-30-1.noarch.rpm
+    - sudo rpm -i --nodeps --force fedora-repos-30-1.noarch.rpm
+    - sudo yum --releasever=30 install -y --nogpgcheck dnf
+    - dnf --version
+
+install:
+    - export PATH="$PATH:$GOPATH/bin"
+    - go env
+    - curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.18.0
+
+before_script:
+    - make
+    - sudo -E make install
 
 script:
-    - docker run testdock
+    - make lint
+    - make check
+    - sudo -E make batcheck
