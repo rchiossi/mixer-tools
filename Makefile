@@ -7,8 +7,6 @@
 # when the repository is already inside a GOPATH.
 include Makefile.bats
 
-.NOTPARALLEL:
-
 VERSION=5.9.1
 GO_PACKAGE_PREFIX := github.com/clearlinux/mixer-tools
 
