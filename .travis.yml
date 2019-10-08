@@ -2,9 +2,15 @@ language: go
 sudo: required
 
 go:
-    - 1.11
+    - 1.13
 
 go_import_path: github.com/clearlinux/mixer-tools
+
+env:
+    - GROUP=batcheck-1
+    - GROUP=batcheck-2
+    - GROUP=batcheck-3
+    - GROUP=batcheck-4
 
 services:
     - docker
@@ -13,4 +19,4 @@ before_install:
     - docker build -t testdock .
 
 script:
-    - docker run testdock
+    - docker run -e BAT_GROUP=$GROUP testdock
