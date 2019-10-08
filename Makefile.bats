@@ -6,6 +6,7 @@ batcheck: ${DIRS2RUNMAKECHECK}
 
 ${DIRS2RUNMAKECHECK}: checkdir-%:
 	$(MAKE) -C $(dir $(subst checkdir-,,$@)) check
+	$(MAKE) -C $(dir $(subst checkdir-,,$@)) clean
 
 batclean: $(DIRS2RUNMAKECLEAN) clean-dnf
 
