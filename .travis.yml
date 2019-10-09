@@ -19,4 +19,4 @@ before_install:
     - docker build -t testdock .
 
 script:
-    - travis_wait docker run -e BAT_GROUP=$GROUP testdock
+    - travis_wait 30 docker run -e BAT_GROUP=$GROUP testdock
