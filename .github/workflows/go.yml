@@ -1,5 +1,5 @@
 name: Go
-on: [push]
+on: [push, pull_request]
 jobs:
 
   build:
@@ -13,9 +13,17 @@ jobs:
         go-version: 1.13
       id: go
 
+    - name: Install Dependencies
+      run: sudo apt install zstd
+
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
 
+      #    - name: Docker test
+      #id: docker_test
+      #uses: ./.github/actions/docker_run
+      #with:
+      #    command: 'make'
       #    - name: Get dependencies
       #run: |
       #  go get -v -t -d ./...
@@ -27,9 +35,33 @@ jobs:
     - name: Build
       run: make
 
-    - name: Check
-      run: make check
+      #    - name: Check
+      #run: make check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+
+    - name: Install Dependencies
+      run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.18.0
+
+      #    - name: Check out code into the Go module directory
+      #uses: actions/checkout@v1
+    - name: Checkout code
+      run: go get github.com/clearlinux/mixer-tools || true
 
     - name: Lint
-      run: make lint
+      run: |
+          export GOPATH=$(go env GOPATH)
+          export GOBIN=$(go env GOPATH)/bin
+          export PATH=$GOBIN:$PATH
+          cd $GOPATH/src/github.com/clearlinux/mixer-tools
+          make lint
 

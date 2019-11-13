@@ -1,0 +1,16 @@
+# docker_run.yml
+name: 'Docker Run'
+description: 'Run a command inside mixer-ci docker image'
+inputs:
+  command:  # id of input
+    description: 'Command to run'
+    required: true
+    default: ''
+outputs:
+  stdout: # id of output
+    description: 'cmd stdout'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.command }}
